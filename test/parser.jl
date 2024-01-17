@@ -1,7 +1,16 @@
 using Test, MonkeyInterpreter
 
 @testset "Parser" begin
-
+    function test_parer_errors(p::Parser)
+        try
+            @test length(p.errors) == 0
+        catch
+            for err in p.errors
+                @error sprint(showerror, err)
+            end
+            throw(e)
+        end
+    end
 
     @testset failfast = true "Parse Let Statements" begin
         input = """
@@ -15,17 +24,10 @@ using Test, MonkeyInterpreter
             "foobar",
         )
 
-        parser = Parser(Lexer(input))
+        parser = Parser(input)
         program = parse_program!(parser)
 
-        try
-            @test length(parser.errors) == 0
-        catch
-            for err in parser.errors
-                @error sprint(showerror, err)
-            end
-            throw(e)
-        end
+        test_parer_errors(parser)
 
         @test length(program.statements) == length(tests)
 
@@ -37,6 +39,26 @@ using Test, MonkeyInterpreter
             @test token_literal(stmnt.name) == test
         end
 
+    end
+
+    @testset failfast = true "Parse Return Statements" begin
+        input = """
+            return 5;
+            return 10;
+            return 993322;
+        """
+
+        parser = Parser(input)
+        program = parse_program!(parser)
+
+        test_parer_errors(parser)
+
+        @test length(program.statements) == 3
+
+        for stmnt in program.statements
+            @test token_literal(stmnt) == "return"
+            @test typeof(stmnt) == ReturnStatement
+        end
     end
 
 end
