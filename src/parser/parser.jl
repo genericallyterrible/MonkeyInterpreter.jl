@@ -42,49 +42,6 @@ function next_token!(p::Parser)::Token
     return p.current_token
 end
 
-function parse_program!(p::Parser)::Program
-    stmnts::Vector{Statement} = []
-    while !current_token_is(p, TokenTypes.EOF)
-        try
-            push!(stmnts, parse_statement!(p))
-        catch e
-            if isa(e, ParseError)
-                push!(p.errors, e)
-            else
-                rethrow()
-            end
-        end
-        next_token!(p)
-    end
-    return Program(stmnts)
-end
-
-function parse_statement!(p::Parser)::Statement
-    cur_type = p.current_token.type
-    if cur_type == TokenTypes.LET
-        return parse_let_statement!(p)
-    end
-    throw(UnsupportedStatementError(p.current_token.type))
-end
-
-function parse_let_statement!(p::Parser)::LetStatement
-    let_tok = p.current_token
-
-    ident_tok = expect_next_token!(p, TokenTypes.IDENT)
-    ident = Identifier(ident_tok, ident_tok.literal)
-
-    expect_next_token!(p, TokenTypes.ASSIGN)
-
-    # TODO: We're skipping the expressions until we
-    # encounter a semicolon
-    while !current_token_is(p, TokenTypes.SEMICOLON)
-        next_token!(p)
-    end
-
-    return LetStatement(let_tok, ident, ident)
-
-end
-
 """
     current_token_is(p::Parser, t::TokenType)::Bool
 
@@ -116,4 +73,63 @@ function expect_next_token!(p::Parser, t::TokenType)::Token
         throw(ExpectedTokenError(t, p.peek_token.type))
     end
     return next_token!(p)
+end
+
+function parse_program!(p::Parser)::Program
+    stmnts::Vector{Statement} = []
+    while !current_token_is(p, TokenTypes.EOF)
+        try
+            push!(stmnts, parse_statement!(p))
+        catch e
+            if isa(e, ParseError)
+                push!(p.errors, e)
+            else
+                rethrow()
+            end
+        end
+        next_token!(p)
+    end
+    return Program(stmnts)
+end
+
+function parse_statement!(p::Parser)::Statement
+    cur_type = p.current_token.type
+    if cur_type == TokenTypes.LET
+        return parse_let_statement!(p)
+    elseif cur_type == TokenTypes.RETURN
+        return parse_return_statement!(p)
+    end
+    throw(UnsupportedStatementError(p.current_token.type))
+end
+
+function parse_let_statement!(p::Parser)::LetStatement
+    let_tok = p.current_token
+
+    ident_tok = expect_next_token!(p, TokenTypes.IDENT)
+    ident = Identifier(ident_tok, ident_tok.literal)
+
+    expect_next_token!(p, TokenTypes.ASSIGN)
+
+    expr = parse_expression!(p)
+
+    return LetStatement(let_tok, ident, expr)
+end
+
+function parse_return_statement!(p::Parser)::ReturnStatement
+    return_tok = p.current_token
+
+    next_token!(p)
+
+    expr = parse_expression!(p)
+
+    return ReturnStatement(return_tok, expr)
+end
+
+function parse_expression!(p::Parser)::Nothing
+    # TODO: We're skipping the expressions until we
+    # encounter a semicolon
+    while !current_token_is(p, TokenTypes.SEMICOLON)
+        next_token!(p)
+    end
+    return nothing
 end
