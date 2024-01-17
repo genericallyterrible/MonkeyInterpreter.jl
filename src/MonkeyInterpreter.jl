@@ -9,6 +9,7 @@ export Node,  # ast.jl
     Program,
     Identifier,
     LetStatement,
+    ReturnStatement,
     token_literal,
     statement_node,
     expression_node

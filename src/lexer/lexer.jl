@@ -5,7 +5,7 @@ mutable struct Lexer
     read_position::Int  # current reading position in input (after current char)
     ch::Char            # current char under examination
 
-    function Lexer(input::String)::Lexer
+    function Lexer(input::AbstractString)::Lexer
         l = new(input, 0, 1)
         readchar!(l)
         return l

@@ -16,7 +16,12 @@ end
 struct LetStatement <: Statement
     token::Token
     name::Identifier
-    value::Expression
+    value::Nothing  # TODO Expression
+end
+
+struct ReturnStatement <: Statement
+    token::Token
+    value::Nothing  # TODO Expression
 end
 
 
