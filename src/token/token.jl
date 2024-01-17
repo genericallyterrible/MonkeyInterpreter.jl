@@ -1,5 +1,3 @@
-export Token, TokenTypes, look_up_ident
-
 module TokenTypes
 export TokenType
 @enum TokenType begin
@@ -44,11 +42,11 @@ export TokenType
 end
 end  # TokenTypes
 
-using .TokenTypes
+import .TokenTypes.TokenType
 
 struct Token
-    Type::TokenType
-    Literal::String
+    type::TokenType
+    literal::String
 end
 
 Token(Type::TokenType, Literal::AbstractChar) = Token(Type, string(Literal))
