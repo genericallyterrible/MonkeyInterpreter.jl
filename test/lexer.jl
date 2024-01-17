@@ -5,7 +5,7 @@ using Test, MonkeyInterpreter
         l = Lexer(input)
         for expect::Token in expects
             pos = l.position
-            tok = nexttoken!(l)
+            tok = next_token!(l)
             try
                 @test tok == expect
             catch e
@@ -14,7 +14,7 @@ using Test, MonkeyInterpreter
                     Got:      $(tok)
                     At:       [$pos:$(l.position-1)]
                     "$input"
-                    """ tok
+                    """
                 throw(e)
             end
         end
@@ -37,7 +37,8 @@ using Test, MonkeyInterpreter
     end
 
     @testset failfast = true "Lex Small Program" begin
-        input = """let five = 5;
+        input = """
+            let five = 5;
             let ten = 10;
 
             let add = fn(x, y) {
@@ -90,7 +91,8 @@ using Test, MonkeyInterpreter
     end
 
     @testset failfast = true "Lex Some Gibberish" begin
-        input = """let five = 5;
+        input = """
+            let five = 5;
             let ten = 10;
 
             let add = fn(x, y) {
@@ -157,7 +159,8 @@ using Test, MonkeyInterpreter
     end
 
     @testset failfast = true "Lex New Keywords" begin
-        input = """let five = 5;
+        input = """
+            let five = 5;
             let ten = 10;
 
             let add = fn(x, y) {
@@ -247,7 +250,8 @@ using Test, MonkeyInterpreter
     end
 
     @testset failfast = true "Lex Multi-Char Tokens" begin
-        input = """let five = 5;
+        input = """
+            let five = 5;
             let ten = 10;
 
             let add = fn(x, y) {
