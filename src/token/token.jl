@@ -51,7 +51,7 @@ end
 
 Token(Type::TokenType, Literal::AbstractChar) = Token(Type, string(Literal))
 
-keywords::Dict{String,TokenType} = Dict(
+const KEYWORDS::Dict{String,TokenType} = Dict(
     "fn" => TokenTypes.FUNCTION,
     "let" => TokenTypes.LET,
     "true" => TokenTypes.TRUE,
@@ -62,5 +62,5 @@ keywords::Dict{String,TokenType} = Dict(
 )
 
 function look_up_ident(ident::String)
-    return get(keywords, ident, TokenTypes.IDENT)
+    return get(KEYWORDS, ident, TokenTypes.IDENT)
 end

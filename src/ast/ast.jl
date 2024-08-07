@@ -28,7 +28,7 @@ end
 
 struct ExpressionStatement <: Statement
     token::Token
-    Expression::Union{Expression,Nothing}  # TODO Expression
+    expression::Union{Expression,Nothing}  # TODO Expression
 end
 
 
@@ -91,8 +91,8 @@ function Base.print(io::IO, rs::ReturnStatement)
 end
 
 function Base.print(io::IO, es::ExpressionStatement)
-    if es.Expression !== nothing  # TODO Expression
-        print(io, es.Expression)
+    if es.expression !== nothing  # TODO Expression
+        print(io, es.expression)
     end
     print(io, ";")
     return
