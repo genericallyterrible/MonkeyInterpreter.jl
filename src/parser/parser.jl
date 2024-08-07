@@ -36,6 +36,11 @@ mutable struct Parser
     end
 end
 
+"""
+    next_token!(p::Parser)::Token
+
+Advances the underlying lexer to the next token and return the new current token.
+"""
 function next_token!(p::Parser)::Token
     p.current_token = p.peek_token
     p.peek_token = next_token!(p.lexer)
@@ -75,6 +80,12 @@ function expect_next_token!(p::Parser, t::TokenType)::Token
     return next_token!(p)
 end
 
+"""
+    parse_program!(p::Parser)::Program
+
+Parses a sequence of statements from the parser until the end of the
+file (EOF) is reached.
+"""
 function parse_program!(p::Parser)::Program
     stmnts::Vector{Statement} = []
     while !current_token_is(p, TokenTypes.EOF)
@@ -92,6 +103,11 @@ function parse_program!(p::Parser)::Program
     return Program(stmnts)
 end
 
+"""
+    parse_statement!(p::Parser)::Statement
+
+Parses a single statement from the parser based on the current token type.
+"""
 function parse_statement!(p::Parser)::Statement
     cur_type = p.current_token.type
     if cur_type == TokenTypes.LET
@@ -99,9 +115,14 @@ function parse_statement!(p::Parser)::Statement
     elseif cur_type == TokenTypes.RETURN
         return parse_return_statement!(p)
     end
-    throw(UnsupportedStatementError(p.current_token.type))
+    throw(UnsupportedStatementError(cur_type))
 end
 
+"""
+    parse_let_statement!(p::Parser)::LetStatement
+
+Parses a `LET` statement from the parser.
+"""
 function parse_let_statement!(p::Parser)::LetStatement
     let_tok = p.current_token
 
@@ -115,6 +136,11 @@ function parse_let_statement!(p::Parser)::LetStatement
     return LetStatement(let_tok, ident, expr)
 end
 
+"""
+    parse_return_statement!(p::Parser)::ReturnStatement
+
+Parses a `RETURN` statement from the parser.
+"""
 function parse_return_statement!(p::Parser)::ReturnStatement
     return_tok = p.current_token
 

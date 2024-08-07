@@ -15,6 +15,7 @@ end
 """
     readchar!(l::Lexer)::Nothing
 
+Read the next available character and advance the lexer.
 """
 function readchar!(l::Lexer)::Nothing
     l.ch = peekchar(l)
@@ -23,6 +24,11 @@ function readchar!(l::Lexer)::Nothing
     return nothing
 end
 
+"""
+    peekchar(l::Lexer)::Char
+
+Returns the next character available to lex without advancing the lexer.
+"""
 function peekchar(l::Lexer)::Char
     return l.read_position <= length(l.input) ? l.input[l.read_position] : '\0'
 end

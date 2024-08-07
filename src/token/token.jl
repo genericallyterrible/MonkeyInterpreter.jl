@@ -5,40 +5,40 @@ export TokenType
     EOF
 
     # Identifiers + literals
-    IDENT  # add, foobar, x, y, ...
-    INT    # 1343456
+    IDENT      # add, foobar, x, y, ...
+    INT        # 1343456
 
     # Operators
-    ASSIGN    # "="
-    PLUS      # "+"
-    MINUS     # "-"
-    BANG      # "!"
-    ASTERISK  # "*"
-    SLASH     # "/"
+    ASSIGN     # "="
+    PLUS       # "+"
+    MINUS      # "-"
+    BANG       # "!"
+    ASTERISK   # "*"
+    SLASH      # "/"
 
-    LT  # "<"
-    GT  # ">"
+    LT         # "<"
+    GT         # ">"
 
-    EQ      # "=="
-    NOT_EQ  # "!="
+    EQ         # "=="
+    NOT_EQ     # "!="
 
     # Delimiters
     COMMA      # ","
     SEMICOLON  # ";"
 
-    LPAREN  # "("
-    RPAREN  # ")"
-    LBRACE  # "{"
-    RBRACE  # "}"
+    LPAREN     # "("
+    RPAREN     # ")"
+    LBRACE     # "{"
+    RBRACE     # "}"
 
     # Keywords
-    FUNCTION  # "FUNCTION"
-    LET       # "LET"
-    TRUE      # "TRUE"
-    FALSE     # "FALSE"
-    IF        # "IF"
-    ELSE      # "ELSE"
-    RETURN    # "RETURN"
+    FUNCTION   # "FUNCTION"
+    LET        # "LET"
+    TRUE       # "TRUE"
+    FALSE      # "FALSE"
+    IF         # "IF"
+    ELSE       # "ELSE"
+    RETURN     # "RETURN"
 end
 end  # TokenTypes
 
