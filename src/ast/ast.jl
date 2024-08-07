@@ -15,20 +15,39 @@ struct Identifier <: Expression
     value::String
 end
 
+struct IntegerLiteral <: Expression
+    token::Token
+    value::Int64
+end
+IntegerLiteral(token::Token, value::String) = IntegerLiteral(token, parse(Int64, value))
+
+struct PrefixExpression <: Expression
+    token::Token
+    operator::String
+    right::Expression
+end
+
+struct InfixExpression <: Expression
+    token::Token
+    operator::String
+    left::Expression
+    right::Expression
+end
+
 struct LetStatement <: Statement
     token::Token
     name::Identifier
-    value::Union{Expression,Nothing}  # TODO Expression
+    value::Expression
 end
 
 struct ReturnStatement <: Statement
     token::Token
-    value::Union{Expression,Nothing}  # TODO Expression
+    return_value::Expression
 end
 
 struct ExpressionStatement <: Statement
     token::Token
-    expression::Union{Expression,Nothing}  # TODO Expression
+    expression::Expression
 end
 
 
@@ -60,40 +79,11 @@ function Base.print(io::IO, node::Node)
     throw("Base.print not implemented on $(typeof(node))")
 end
 
-function Base.print(io::IO, i::Identifier)
-    print(io, i.value)
-    return
-end
-
-function Base.print(io::IO, p::Program)
-    for statement in p.statements
-        print(io, statement)
-    end
-    return
-end
-
-function Base.print(io::IO, ls::LetStatement)
-    print(io, token_literal(ls), " ", ls.name, " = ")
-    if ls.value !== nothing  # TODO Expression
-        print(io, ls.value)
-    end
-    print(io, ";")
-    return
-end
-
-function Base.print(io::IO, rs::ReturnStatement)
-    print(io, token_literal(rs), " ")
-    if rs.value !== nothing  # TODO Expression
-        print(io, rs.value)
-    end
-    print(io, ";")
-    return
-end
-
-function Base.print(io::IO, es::ExpressionStatement)
-    if es.expression !== nothing  # TODO Expression
-        print(io, es.expression)
-    end
-    print(io, ";")
-    return
-end
+Base.print(io::IO, i::Identifier) = print(io, i.value)
+Base.print(io::IO, il::IntegerLiteral) = print(io, il.value)
+Base.print(io::IO, pe::PrefixExpression) = print(io, "(", pe.operator, pe.right, ")")
+Base.print(io::IO, ie::InfixExpression) = print(io, "(", ie.left, " ", ie.operator, " ", ie.right, ")")
+Base.print(io::IO, p::Program) = print(io, p.statements...)
+Base.print(io::IO, ls::LetStatement) = print(io, token_literal(ls), " ", ls.name, " = ", ls.value, ";")
+Base.print(io::IO, rs::ReturnStatement) = print(io, token_literal(rs), " ", rs.return_value, ";")
+Base.print(io::IO, es::ExpressionStatement) = print(io, es.expression)

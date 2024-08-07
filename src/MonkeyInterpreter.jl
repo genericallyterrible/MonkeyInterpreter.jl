@@ -8,8 +8,12 @@ export Node,  # ast.jl
     Expression,
     Program,
     Identifier,
+    IntegerLiteral,
+    PrefixExpression,
+    InfixExpression,
     LetStatement,
     ReturnStatement,
+    ExpressionStatement,
     token_literal,
     statement_node,
     expression_node

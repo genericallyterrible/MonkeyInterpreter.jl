@@ -1,3 +1,31 @@
+module Precedences
+export Precedence
+@enum Precedence begin
+    LOWEST
+    EQUALS       # ==
+    LESSGREATER  # < or >
+    SUM          # +
+    PRODUCT      # *
+    PREFIX       # -x or !x
+    CALL         # my_function(x)
+end
+end  # Precedences
+
+import .Precedences.Precedence
+
+const OPERATOR_PRECEDENCE::Dict{TokenType,Precedence} = Dict(
+    TokenTypes.EQ => Precedences.EQUALS,
+    TokenTypes.NOT_EQ => Precedences.EQUALS,
+    TokenTypes.LT => Precedences.LESSGREATER,
+    TokenTypes.GT => Precedences.LESSGREATER,
+    TokenTypes.PLUS => Precedences.SUM,
+    TokenTypes.MINUS => Precedences.SUM,
+    TokenTypes.SLASH => Precedences.PRODUCT,
+    TokenTypes.ASTERISK => Precedences.PRODUCT,
+)
+
+
+
 abstract type ParseError <: Exception end
 
 struct ExpectedTokenError <: ParseError
@@ -15,6 +43,30 @@ end
 
 function Base.showerror(io::IO, e::UnsupportedStatementError)
     print(io, nameof(typeof(e)), ": unsupported statement beginning with '", e.type, "'")
+end
+
+struct UnsupportedPrefixError <: ParseError
+    type::TokenType
+end
+
+function Base.showerror(io::IO, e::UnsupportedPrefixError)
+    print(io, nameof(typeof(e)), ": cannot parse prefix statement for token type '", e.type, "'")
+end
+
+struct UnsupportedInfixError <: ParseError
+    type::TokenType
+end
+
+function Base.showerror(io::IO, e::UnsupportedInfixError)
+    print(io, nameof(typeof(e)), ": cannot parse infix statement for token type '", e.type, "'")
+end
+
+struct IntegerLiteralParseError <: ParseError
+    literal::String
+end
+
+function Base.showerror(io::IO, e::IntegerLiteralParseError)
+    print(io, nameof(typeof(e)), ": cannot parse '", e.literal, "' as IntegerLiteral")
 end
 
 mutable struct Parser
@@ -80,6 +132,14 @@ function expect_next_token!(p::Parser, t::TokenType)::Token
     return next_token!(p)
 end
 
+function current_precedence(p::Parser)::Precedence
+    return get(OPERATOR_PRECEDENCE, p.current_token.type, Precedences.LOWEST)
+end
+
+function peek_precedence(p::Parser)::Precedence
+    return get(OPERATOR_PRECEDENCE, p.peek_token.type, Precedences.LOWEST)
+end
+
 """
     parse_program!(p::Parser)::Program
 
@@ -110,12 +170,19 @@ Parses a single statement from the parser based on the current token type.
 """
 function parse_statement!(p::Parser)::Statement
     cur_type = p.current_token.type
-    if cur_type == TokenTypes.LET
-        return parse_let_statement!(p)
+    stmnt = if cur_type == TokenTypes.LET
+        parse_let_statement!(p)
     elseif cur_type == TokenTypes.RETURN
-        return parse_return_statement!(p)
+        parse_return_statement!(p)
+    else
+        parse_expression_statement!(p)
     end
-    throw(UnsupportedStatementError(cur_type))
+
+    if peek_token_is(p, TokenTypes.SEMICOLON)
+        next_token!(p)
+    end
+
+    return stmnt
 end
 
 """
@@ -130,9 +197,9 @@ function parse_let_statement!(p::Parser)::LetStatement
     ident = Identifier(ident_tok, ident_tok.literal)
 
     expect_next_token!(p, TokenTypes.ASSIGN)
+    next_token!(p)
 
-    expr = parse_expression!(p)
-
+    expr = parse_expression!(p, Precedences.LOWEST)
     return LetStatement(let_tok, ident, expr)
 end
 
@@ -146,16 +213,84 @@ function parse_return_statement!(p::Parser)::ReturnStatement
 
     next_token!(p)
 
-    expr = parse_expression!(p)
+    expr = parse_expression!(p, Precedences.LOWEST)
 
     return ReturnStatement(return_tok, expr)
 end
 
-function parse_expression!(p::Parser)::Nothing
-    # TODO: We're skipping the expressions until we
-    # encounter a semicolon
-    while !current_token_is(p, TokenTypes.SEMICOLON)
-        next_token!(p)
-    end
-    return nothing
+function parse_expression_statement!(p::Parser)::ExpressionStatement
+    return ExpressionStatement(p.current_token, parse_expression!(p, Precedences.LOWEST))
 end
+
+function parse_expression!(p::Parser, precedence::Precedence)::Expression
+    prefix = get(PREFIX_PARSE_FNS, p.current_token.type, nothing)
+    if prefix === nothing
+        throw(UnsupportedPrefixError(p.current_token.type))
+    end
+    left_exp = prefix(p)
+
+    while !peek_token_is(p, TokenTypes.SEMICOLON) && precedence < peek_precedence(p)
+        infix = get(INFIX_PARSE_FNS, p.peek_token.type, nothing)
+        if infix === nothing
+            throw(UnsupportedInfixError(p.current_token.type))
+        end
+        next_token!(p)
+        left_exp = infix(p, left_exp)
+    end
+
+    return left_exp
+end
+
+function parse_identifier(p::Parser)::Identifier
+    return Identifier(p.current_token, p.current_token.literal)
+end
+
+function parse_integer_literal(p::Parser)::IntegerLiteral
+    try
+        return IntegerLiteral(p.current_token, p.current_token.literal)
+    catch
+        throw(IntegerLiteralParseError(p.current_token.literal))
+    end
+end
+
+function parse_prefix_expression!(p::Parser)::PrefixExpression
+    tok = p.current_token
+    op = p.current_token.literal
+    next_token!(p)
+    right = parse_expression!(p, Precedences.PREFIX)
+    return PrefixExpression(tok, op, right)
+end
+
+function parse_infix_expression!(p::Parser, left::Expression)::InfixExpression
+    tok = p.current_token
+    op = p.current_token.literal
+    prec = current_precedence(p)
+    next_token!(p)
+    right = parse_expression!(p, prec)
+    return InfixExpression(tok, op, left, right)
+
+end
+
+const PREFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
+    TokenTypes.IDENT => parse_identifier,
+    TokenTypes.INT => parse_integer_literal,
+    TokenTypes.BANG => parse_prefix_expression!,
+    TokenTypes.MINUS => parse_prefix_expression!,
+    # TokenTypes.TRUE => () -> nothing,
+    # TokenTypes.FALSE => () -> nothing,
+    # TokenTypes.LPAREN => () -> nothing,
+    # TokenTypes.IF => () -> nothing,
+    # TokenTypes.FUNCTION => () -> nothing,
+)
+
+const INFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
+    TokenTypes.PLUS => parse_infix_expression!,
+    TokenTypes.MINUS => parse_infix_expression!,
+    TokenTypes.SLASH => parse_infix_expression!,
+    TokenTypes.ASTERISK => parse_infix_expression!,
+    TokenTypes.EQ => parse_infix_expression!,
+    TokenTypes.NOT_EQ => parse_infix_expression!,
+    TokenTypes.LT => parse_infix_expression!,
+    TokenTypes.GT => parse_infix_expression!,
+    # TokenTypes.LPAREN => () -> nothing,
+)
