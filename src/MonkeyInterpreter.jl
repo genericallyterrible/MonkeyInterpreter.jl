@@ -9,6 +9,7 @@ export Node,  # ast.jl
     Program,
     Identifier,
     IntegerLiteral,
+    BooleanLiteral,
     PrefixExpression,
     InfixExpression,
     LetStatement,

@@ -21,6 +21,11 @@ struct IntegerLiteral <: Expression
 end
 IntegerLiteral(token::Token, value::String) = IntegerLiteral(token, parse(Int64, value))
 
+struct BooleanLiteral <: Expression
+    token::Token
+    value::Bool
+end
+
 struct PrefixExpression <: Expression
     token::Token
     operator::String
@@ -81,6 +86,7 @@ end
 
 Base.print(io::IO, i::Identifier) = print(io, i.value)
 Base.print(io::IO, il::IntegerLiteral) = print(io, il.value)
+Base.print(io::IO, bl::BooleanLiteral) = print(io, bl.value)
 Base.print(io::IO, pe::PrefixExpression) = print(io, "(", pe.operator, pe.right, ")")
 Base.print(io::IO, ie::InfixExpression) = print(io, "(", ie.left, " ", ie.operator, " ", ie.right, ")")
 Base.print(io::IO, p::Program) = print(io, p.statements...)

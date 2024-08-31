@@ -28,8 +28,15 @@ using Test, MonkeyInterpreter
         @test token_literal(exp) == string(value)
     end
 
+    @inline function test_boolean_literal(exp::Expression, value::Bool)
+        @test typeof(exp) == BooleanLiteral
+        @test exp.value == value
+        @test token_literal(exp) == string(value)
+    end
+
     test_literal_expression(exp::Expression, value::String) = test_identifier(exp, value)
     test_literal_expression(exp::Expression, value::Int64) = test_integer_literal(exp, value)
+    test_literal_expression(exp::Expression, value::Bool) = test_boolean_literal(exp, value)
 
     @inline function test_infix_expression(exp::Expression, left, operator::String, right)
         @test typeof(exp) == InfixExpression
@@ -69,7 +76,7 @@ using Test, MonkeyInterpreter
             end
         end
 
-        @testset failfast = true "Parse Return Statements" begin
+        @testset "Parse Return Statements" begin
             tests = [
                 ("return 5;", 5),
                 ("return 10;", 10),
@@ -87,24 +94,15 @@ using Test, MonkeyInterpreter
     end
 
     @testset "Expressions" begin
-        @testset "Parse Identifier Expression" begin
-            program = test_program_parse("foobar;")
-            @test length(program.statements) == 1
-
-            stmnt = program.statements[1]
-            @test typeof(stmnt) == ExpressionStatement
-
-            ident = stmnt.expression
-            @test typeof(ident) == Identifier
-            @test ident.value == "foobar"
-            @test token_literal(ident) == "foobar"
-        end
-
-        @testset "Parse IntegerLiteral" begin
+        @testset "Parse Literal Expressions" begin
             tests = [
                 ("5;" => 5),
                 ("420;" => 420),
                 ("2465468465054;" => 2465468465054),
+                ("true;" => true),
+                ("false;" => false),
+                ("foobar;" => "foobar"),
+                ("baz;" => "baz"),
             ]
             for (input, value) in tests
                 program = test_program_parse(input)
@@ -112,7 +110,7 @@ using Test, MonkeyInterpreter
 
                 stmnt = program.statements[1]
                 @test typeof(stmnt) == ExpressionStatement
-                test_integer_literal(stmnt.expression, value)
+                test_literal_expression(stmnt.expression, value)
             end
         end
 
@@ -122,6 +120,8 @@ using Test, MonkeyInterpreter
                 ("-15;" => ("-", 15)),
                 ("!foobar;" => ("!", "foobar")),
                 ("-foobar;" => ("-", "foobar")),
+                ("!true;" => ("!", true)),
+                ("!false;" => ("!", false)),
             ]
             for (input, (operator, value)) in tests
                 program = test_program_parse(input)
@@ -155,6 +155,9 @@ using Test, MonkeyInterpreter
                 ("foobar < barfoo;" => ("foobar", "<", "barfoo")),
                 ("foobar == barfoo;" => ("foobar", "==", "barfoo")),
                 ("foobar != barfoo;" => ("foobar", "!=", "barfoo")),
+                ("true == true;" => (true, "==", true)),
+                ("true != false;" => (true, "!=", false)),
+                ("false == false;" => (false, "==", false)),
             ]
             for (input, (left_value, operator, right_value)) in tests
                 program = test_program_parse(input)
@@ -216,6 +219,22 @@ using Test, MonkeyInterpreter
                 (
                     "3 + 4 * 5 == 3 * 1 + 4 * 5",
                     "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))", 1
+                ),
+                (
+                    "true",
+                    "true", 1
+                ),
+                (
+                    "false",
+                    "false", 1
+                ),
+                (
+                    "3 < 5 == true",
+                    "((3 < 5) == true)", 1
+                ),
+                (
+                    "3 > 5 == false",
+                    "((3 > 5) == false)", 1
                 ),
             ]
             for (input, expected, stmnts) in tests

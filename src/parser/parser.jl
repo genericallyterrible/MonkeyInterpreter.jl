@@ -264,6 +264,10 @@ function parse_prefix_expression!(p::Parser)::PrefixExpression
     return PrefixExpression(tok, op, right)
 end
 
+function parse_boolean_literal(p::Parser)::BooleanLiteral
+    return BooleanLiteral(p.current_token, current_token_is(p, TokenTypes.TRUE))
+end
+
 function parse_infix_expression!(p::Parser, left::Expression)::InfixExpression
     tok = p.current_token
     op = p.current_token.literal
@@ -279,8 +283,8 @@ const PREFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
     TokenTypes.INT => parse_integer_literal,
     TokenTypes.BANG => parse_prefix_expression!,
     TokenTypes.MINUS => parse_prefix_expression!,
-    # TokenTypes.TRUE => () -> nothing,
-    # TokenTypes.FALSE => () -> nothing,
+    TokenTypes.TRUE => parse_boolean_literal,
+    TokenTypes.FALSE => parse_boolean_literal,
     # TokenTypes.LPAREN => () -> nothing,
     # TokenTypes.IF => () -> nothing,
     # TokenTypes.FUNCTION => () -> nothing,
