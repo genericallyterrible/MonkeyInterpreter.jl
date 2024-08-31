@@ -268,6 +268,13 @@ function parse_boolean_literal(p::Parser)::BooleanLiteral
     return BooleanLiteral(p.current_token, current_token_is(p, TokenTypes.TRUE))
 end
 
+function parse_grouped_expression!(p::Parser)::Expression
+    next_token!(p)
+    exp = parse_expression!(p, Precedences.LOWEST)
+    expect_next_token!(p, TokenTypes.RPAREN)
+    return exp
+end
+
 function parse_infix_expression!(p::Parser, left::Expression)::InfixExpression
     tok = p.current_token
     op = p.current_token.literal
@@ -285,7 +292,7 @@ const PREFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
     TokenTypes.MINUS => parse_prefix_expression!,
     TokenTypes.TRUE => parse_boolean_literal,
     TokenTypes.FALSE => parse_boolean_literal,
-    # TokenTypes.LPAREN => () -> nothing,
+    TokenTypes.LPAREN => parse_grouped_expression!,
     # TokenTypes.IF => () -> nothing,
     # TokenTypes.FUNCTION => () -> nothing,
 )
@@ -299,5 +306,5 @@ const INFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
     TokenTypes.NOT_EQ => parse_infix_expression!,
     TokenTypes.LT => parse_infix_expression!,
     TokenTypes.GT => parse_infix_expression!,
-    # TokenTypes.LPAREN => () -> nothing,
+    TokenTypes.LPAREN => parse_grouped_expression!,
 )

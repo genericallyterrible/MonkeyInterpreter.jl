@@ -236,6 +236,26 @@ using Test, MonkeyInterpreter
                     "3 > 5 == false",
                     "((3 > 5) == false)", 1
                 ),
+                (
+                    "1 + (2 + 3) + 4",
+                    "((1 + (2 + 3)) + 4)", 1
+                ),
+                (
+                    "(5 + 5) * 2",
+                    "((5 + 5) * 2)", 1
+                ),
+                (
+                    "2 / (5 + 5)",
+                    "(2 / (5 + 5))", 1
+                ),
+                (
+                    "-(5 + 5)",
+                    "(-(5 + 5))", 1
+                ),
+                (
+                    "!(true == true)",
+                    "(!(true == true))", 1
+                ),
             ]
             for (input, expected, stmnts) in tests
                 program = test_program_parse(input)
