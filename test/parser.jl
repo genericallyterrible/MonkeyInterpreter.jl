@@ -1,14 +1,6 @@
 using Test, MonkeyInterpreter
 
 @testset "Parser" begin
-    @inline function parse_input_to_program(input::String)::Program
-        parser = Parser(input)
-        program = parse_program!(parser)
-
-        test_parer_errors(parser)
-        return program
-    end
-
     @inline function test_parer_errors(p::Parser)
         for err in p.errors
             @error sprint(showerror, err)
@@ -16,52 +8,87 @@ using Test, MonkeyInterpreter
         @test length(p.errors) == 0
     end
 
+    @inline function test_program_parse(input::String)::Program
+        parser = Parser(input)
+        program = Program(parser)
+
+        test_parer_errors(parser)
+        return program
+    end
+
+    @inline function test_identifier(exp::Expression, value::String)
+        @test typeof(exp) == Identifier
+        @test exp.value == value
+        @test token_literal(exp) == value
+    end
+
+    @inline function test_integer_literal(exp::Expression, value::Int64)
+        @test typeof(exp) == IntegerLiteral
+        @test exp.value == value
+        @test token_literal(exp) == string(value)
+    end
+
+    test_literal_expression(exp::Expression, value::String) = test_identifier(exp, value)
+    test_literal_expression(exp::Expression, value::Int64) = test_integer_literal(exp, value)
+
+    @inline function test_infix_expression(exp::Expression, left, operator::String, right)
+        @test typeof(exp) == InfixExpression
+        @test exp.operator == operator
+        test_literal_expression(exp.left, left)
+        test_literal_expression(exp.right, right)
+    end
+
+    @inline function test_let_statement(stmnt::Statement, name::String, value)
+        @test typeof(stmnt) == LetStatement
+        @test token_literal(stmnt) == "let"
+        @test stmnt.name.value == name
+        @test token_literal(stmnt.name) == name
+        test_literal_expression(stmnt.value, value)
+    end
+
+    @inline function test_return_statement(stmnt::Statement, return_value)
+        @test typeof(stmnt) == ReturnStatement
+        @test token_literal(stmnt) == "return"
+        test_literal_expression(stmnt.return_value, return_value)
+    end
+
     @testset "Statements" begin
         @testset "Parse Let Statements" begin
-            input = """
-                let x = 5;
-                let y = 10;
-                let foobar = 838383;
-            """
-            tests = (
-                "x",
-                "y",
-                "foobar",
-            )
+            tests = [
+                ("let x = 5;", "x", 5),
+                ("let y = 10;", "y", 10),
+                ("let foobar = 838383;", "foobar", 838383),
+            ]
 
-            program = parse_input_to_program(input)
-            @test length(program.statements) == length(tests)
+            for (input, name, value) in tests
+                program = test_program_parse(input)
+                @test length(program.statements) == 1
 
-            for (i, test) in enumerate(tests)
-                stmnt = program.statements[i]
-                @test token_literal(stmnt) == "let"
-                @test typeof(stmnt) == LetStatement
-                @test stmnt.name.value == test
-                @test token_literal(stmnt.name) == test
+                stmnt = program.statements[1]
+                test_let_statement(stmnt, name, value)
             end
-
         end
 
-        @testset failfast=true "Parse Return Statements" begin
-            input = """
-                return 5;
-                return 10;
-                return 993322;
-            """
+        @testset failfast = true "Parse Return Statements" begin
+            tests = [
+                ("return 5;", 5),
+                ("return 10;", 10),
+                ("return 993322;", 993322),
+            ]
 
-            program = parse_input_to_program(input)
-            @test length(program.statements) == 3
+            for (input, return_value) in tests
+                program = test_program_parse(input)
+                @test length(program.statements) == 1
 
-            for stmnt in program.statements
-                @test token_literal(stmnt) == "return"
-                @test typeof(stmnt) == ReturnStatement
+                stmnt = program.statements[1]
+                test_return_statement(stmnt, return_value)
             end
         end
     end
 
     @testset "Expressions" begin
         @testset "Parse Identifier Expression" begin
-            program = parse_input_to_program("foobar;")
+            program = test_program_parse("foobar;")
             @test length(program.statements) == 1
 
             stmnt = program.statements[1]
@@ -73,33 +100,31 @@ using Test, MonkeyInterpreter
             @test token_literal(ident) == "foobar"
         end
 
-        @inline function test_integer_literal(exp::Expression, value::Int64)
-            @test typeof(exp) == IntegerLiteral
-            @test exp.value == value
-            @test token_literal(exp) == string(value)
-        end
-
         @testset "Parse IntegerLiteral" begin
-            program = parse_input_to_program("5;")
-            @test length(program.statements) == 1
+            tests = [
+                ("5;" => 5),
+                ("420;" => 420),
+                ("2465468465054;" => 2465468465054),
+            ]
+            for (input, value) in tests
+                program = test_program_parse(input)
+                @test length(program.statements) == 1
 
-            stmnt = program.statements[1]
-            @test typeof(stmnt) == ExpressionStatement
-            test_integer_literal(stmnt.expression, 5)
+                stmnt = program.statements[1]
+                @test typeof(stmnt) == ExpressionStatement
+                test_integer_literal(stmnt.expression, value)
+            end
         end
 
         @testset "Parse Prefix Expressions" begin
-            struct PrefixTest
-                input::String
-                operator::String
-                integer_value::Int64
-            end
-            tests = splat(PrefixTest).((
-                ("!5;", "!", 5),
-                ("-15;", "-", 15),
-            ))
-            for test in tests
-                program = parse_input_to_program(test.input)
+            tests = [
+                ("!5;" => ("!", 5)),
+                ("-15;" => ("-", 15)),
+                ("!foobar;" => ("!", "foobar")),
+                ("-foobar;" => ("-", "foobar")),
+            ]
+            for (input, (operator, value)) in tests
+                program = test_program_parse(input)
                 @test length(program.statements) == 1
 
                 stmnt = program.statements[1]
@@ -107,30 +132,32 @@ using Test, MonkeyInterpreter
 
                 exp = stmnt.expression
                 @test typeof(exp) == PrefixExpression
-                @test exp.operator == test.operator
-                test_integer_literal(exp.right, test.integer_value)
+                @test exp.operator == operator
+                test_literal_expression(exp.right, value)
             end
         end
 
         @testset "Parse Infix Expressions" begin
-            struct InfixTest
-                input::String
-                left_value::Int64
-                operator::String
-                right_value::Int64
-            end
-            tests = splat(InfixTest).((
-                ("5 + 5;", 5, "+", 5),
-                ("5 - 5;", 5, "-", 5),
-                ("5 * 5;", 5, "*", 5),
-                ("5 / 5;", 5, "/", 5),
-                ("5 > 5;", 5, ">", 5),
-                ("5 < 5;", 5, "<", 5),
-                ("5 == 5;", 5, "==", 5),
-                ("5 != 5;", 5, "!=", 5),
-            ))
-            for test in tests
-                program = parse_input_to_program(test.input)
+            tests::Vector{Pair{String,Tuple{Any,String,Any}}} = [
+                ("5 + 5;" => (5, "+", 5)),
+                ("5 - 5;" => (5, "-", 5)),
+                ("5 * 5;" => (5, "*", 5)),
+                ("5 / 5;" => (5, "/", 5)),
+                ("5 > 5;" => (5, ">", 5)),
+                ("5 < 5;" => (5, "<", 5)),
+                ("5 == 5;" => (5, "==", 5)),
+                ("5 != 5;" => (5, "!=", 5)),
+                ("foobar + barfoo;" => ("foobar", "+", "barfoo")),
+                ("foobar - barfoo;" => ("foobar", "-", "barfoo")),
+                ("foobar * barfoo;" => ("foobar", "*", "barfoo")),
+                ("foobar / barfoo;" => ("foobar", "/", "barfoo")),
+                ("foobar > barfoo;" => ("foobar", ">", "barfoo")),
+                ("foobar < barfoo;" => ("foobar", "<", "barfoo")),
+                ("foobar == barfoo;" => ("foobar", "==", "barfoo")),
+                ("foobar != barfoo;" => ("foobar", "!=", "barfoo")),
+            ]
+            for (input, (left_value, operator, right_value)) in tests
+                program = test_program_parse(input)
                 @test length(program.statements) == 1
 
                 stmnt = program.statements[1]
@@ -138,28 +165,61 @@ using Test, MonkeyInterpreter
 
                 exp = stmnt.expression
                 @test typeof(exp) == InfixExpression
-                @test exp.operator == test.operator
-                test_integer_literal(exp.left, test.left_value)
-                test_integer_literal(exp.right, test.right_value)
+                @test exp.operator == operator
+                test_literal_expression(exp.left, left_value)
+                test_literal_expression(exp.right, right_value)
             end
         end
 
         @testset "Parse with Operator Precedence" begin
             tests::Vector{Tuple{String,String,Int}} = [
-                ("-a * b", "((-a) * b)", 1),
-                ("!-a", "(!(-a))", 1),
-                ("a + b - c", "((a + b) - c)", 1),
-                ("a * b * c", "((a * b) * c)", 1),
-                ("a * b / c", "((a * b) / c)", 1),
-                ("a + b / c", "(a + (b / c))", 1),
-                ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)", 1),
-                ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)", 2),
-                ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))", 1),
-                ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))", 1),
-                ("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))", 1),
+                (
+                    "-a * b",
+                    "((-a) * b)", 1
+                ),
+                (
+                    "!-a",
+                    "(!(-a))", 1
+                ),
+                (
+                    "a + b - c",
+                    "((a + b) - c)", 1
+                ),
+                (
+                    "a * b * c",
+                    "((a * b) * c)", 1
+                ),
+                (
+                    "a * b / c",
+                    "((a * b) / c)", 1
+                ),
+                (
+                    "a + b / c",
+                    "(a + (b / c))", 1
+                ),
+                (
+                    "a + b * c + d / e - f",
+                    "(((a + (b * c)) + (d / e)) - f)", 1
+                ),
+                (
+                    "3 + 4; -5 * 5",
+                    "(3 + 4)((-5) * 5)", 2
+                ),
+                (
+                    "5 > 4 == 3 < 4",
+                    "((5 > 4) == (3 < 4))", 1
+                ),
+                (
+                    "5 < 4 != 3 > 4",
+                    "((5 < 4) != (3 > 4))", 1
+                ),
+                (
+                    "3 + 4 * 5 == 3 * 1 + 4 * 5",
+                    "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))", 1
+                ),
             ]
             for (input, expected, stmnts) in tests
-                program = parse_input_to_program(input)
+                program = test_program_parse(input)
                 @test length(program.statements) == stmnts
                 @test string(program) == expected
             end

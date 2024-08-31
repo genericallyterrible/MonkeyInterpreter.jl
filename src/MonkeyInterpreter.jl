@@ -18,8 +18,7 @@ export Node,  # ast.jl
     statement_node,
     expression_node
 export Parser,  # parser.jl
-    next_token!,
-    parse_program!
+    next_token!
 
 include("token/token.jl")
 include("lexer/lexer.jl")

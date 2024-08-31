@@ -25,7 +25,6 @@ const OPERATOR_PRECEDENCE::Dict{TokenType,Precedence} = Dict(
 )
 
 
-
 abstract type ParseError <: Exception end
 
 struct ExpectedTokenError <: ParseError
@@ -88,6 +87,10 @@ mutable struct Parser
     end
 end
 
+Program(p::Parser) = Program([stmnt for stmnt in p])
+Program(l::Lexer) = Program(Parser(l))
+Program(input::AbstractString) = Program(Parser(input))
+
 """
     next_token!(p::Parser)::Token
 
@@ -104,7 +107,7 @@ end
 
 Returns whether the current token in the Parser `p` has TokenType `t`.
 """
-function current_token_is(p::Parser, t::TokenType)::Bool
+@inline function current_token_is(p::Parser, t::TokenType)::Bool
     return p.current_token.type == t
 end
 
@@ -113,7 +116,7 @@ end
 
 Returns whether the next token in the Parser `p` has TokenType `t`.
 """
-function peek_token_is(p::Parser, t::TokenType)::Bool
+@inline function peek_token_is(p::Parser, t::TokenType)::Bool
     return p.peek_token.type == t
 end
 
@@ -132,36 +135,36 @@ function expect_next_token!(p::Parser, t::TokenType)::Token
     return next_token!(p)
 end
 
-function current_precedence(p::Parser)::Precedence
+@inline function current_precedence(p::Parser)::Precedence
     return get(OPERATOR_PRECEDENCE, p.current_token.type, Precedences.LOWEST)
 end
 
-function peek_precedence(p::Parser)::Precedence
+@inline function peek_precedence(p::Parser)::Precedence
     return get(OPERATOR_PRECEDENCE, p.peek_token.type, Precedences.LOWEST)
 end
 
-"""
-    parse_program!(p::Parser)::Program
-
-Parses a sequence of statements from the parser until the end of the
-file (EOF) is reached.
-"""
-function parse_program!(p::Parser)::Program
-    stmnts::Vector{Statement} = []
+function Base.iterate(p::Parser, state::Nothing=nothing)
     while !current_token_is(p, TokenTypes.EOF)
         try
-            push!(stmnts, parse_statement!(p))
+            return (parse_statement!(p), nothing)
         catch e
+            if stmnt === nothing
+                println(stmnt)
+            end
             if isa(e, ParseError)
                 push!(p.errors, e)
             else
                 rethrow()
             end
+        finally
+            next_token!(p)
         end
-        next_token!(p)
     end
-    return Program(stmnts)
+    return nothing
 end
+
+Base.eltype(::Type{Parser}) = Statement
+Base.IteratorSize(::Parser) = Base.SizeUnknown()
 
 """
     parse_statement!(p::Parser)::Statement
