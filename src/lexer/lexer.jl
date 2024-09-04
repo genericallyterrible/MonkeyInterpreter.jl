@@ -1,12 +1,11 @@
-export Lexer, nexttoken!
-
 mutable struct Lexer
-    input::String
-    position::Int      # current position in input (points to current char)
-    readPosition::Int  # current reading position in input (after current char)
-    ch::Char           # current char under examination
+    const input::String
 
-    Lexer(input::String) = begin
+    position::Int       # current position in input (points to current char)
+    read_position::Int  # current reading position in input (after current char)
+    ch::Char            # current char under examination
+
+    function Lexer(input::AbstractString)::Lexer
         l = new(input, 0, 1)
         readchar!(l)
         return l
@@ -16,16 +15,22 @@ end
 """
     readchar!(l::Lexer)::Nothing
 
+Read the next available character and advance the lexer.
 """
 function readchar!(l::Lexer)::Nothing
     l.ch = peekchar(l)
-    l.position = l.readPosition
-    l.readPosition += 1
+    l.position = l.read_position
+    l.read_position += 1
     return nothing
 end
 
+"""
+    peekchar(l::Lexer)::Char
+
+Returns the next character available to lex without advancing the lexer.
+"""
 function peekchar(l::Lexer)::Char
-    return l.readPosition <= length(l.input) ? l.input[l.readPosition] : '\0'
+    return l.read_position <= length(l.input) ? l.input[l.read_position] : '\0'
 end
 
 """
@@ -46,7 +51,7 @@ julia> next_token!(l)
 Token(TokenTypes.EOF, "")
 ```
 """
-function nexttoken!(l::Lexer)::Token
+function next_token!(l::Lexer)::Token
     skip_whitespace!(l)
     if l.ch == '='
         if peekchar(l) == '='
@@ -132,11 +137,16 @@ function read_digit!(l::Lexer)::String
     return l.input[position:l.position-1]
 end
 
-Base.iterate(l::Lexer, state=nothing) = begin
-    if !isnothing(state) && state.Type == TokenTypes.EOF
+Base.iterate(l::Lexer) = begin
+    tok = next_token!(l)
+    return (tok, tok)
+end
+
+Base.iterate(l::Lexer, state::Token) = begin
+    if state.type == TokenTypes.EOF
         return nothing
     end
-    tok = nexttoken!(l)
+    tok = next_token!(l)
     return (tok, tok)
 end
 

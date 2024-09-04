@@ -1,5 +1,3 @@
-export Token, TokenTypes, look_up_ident
-
 module TokenTypes
 export TokenType
 @enum TokenType begin
@@ -7,53 +5,53 @@ export TokenType
     EOF
 
     # Identifiers + literals
-    IDENT  # add, foobar, x, y, ...
-    INT    # 1343456
+    IDENT      # add, foobar, x, y, ...
+    INT        # 1343456
 
     # Operators
-    ASSIGN    # "="
-    PLUS      # "+"
-    MINUS     # "-"
-    BANG      # "!"
-    ASTERISK  # "*"
-    SLASH     # "/"
+    ASSIGN     # "="
+    PLUS       # "+"
+    MINUS      # "-"
+    BANG       # "!"
+    ASTERISK   # "*"
+    SLASH      # "/"
 
-    LT  # "<"
-    GT  # ">"
+    LT         # "<"
+    GT         # ">"
 
-    EQ      # "=="
-    NOT_EQ  # "!="
+    EQ         # "=="
+    NOT_EQ     # "!="
 
     # Delimiters
     COMMA      # ","
     SEMICOLON  # ";"
 
-    LPAREN  # "("
-    RPAREN  # ")"
-    LBRACE  # "{"
-    RBRACE  # "}"
+    LPAREN     # "("
+    RPAREN     # ")"
+    LBRACE     # "{"
+    RBRACE     # "}"
 
     # Keywords
-    FUNCTION  # "FUNCTION"
-    LET       # "LET"
-    TRUE      # "TRUE"
-    FALSE     # "FALSE"
-    IF        # "IF"
-    ELSE      # "ELSE"
-    RETURN    # "RETURN"
+    FUNCTION   # "FUNCTION"
+    LET        # "LET"
+    TRUE       # "TRUE"
+    FALSE      # "FALSE"
+    IF         # "IF"
+    ELSE       # "ELSE"
+    RETURN     # "RETURN"
 end
 end  # TokenTypes
 
-using .TokenTypes
+import .TokenTypes.TokenType
 
 struct Token
-    Type::TokenType
-    Literal::String
+    type::TokenType
+    literal::String
 end
 
 Token(Type::TokenType, Literal::AbstractChar) = Token(Type, string(Literal))
 
-keywords::Dict{String,TokenType} = Dict(
+const KEYWORDS::Dict{String,TokenType} = Dict(
     "fn" => TokenTypes.FUNCTION,
     "let" => TokenTypes.LET,
     "true" => TokenTypes.TRUE,
@@ -64,5 +62,5 @@ keywords::Dict{String,TokenType} = Dict(
 )
 
 function look_up_ident(ident::String)
-    return get(keywords, ident, TokenTypes.IDENT)
+    return get(KEYWORDS, ident, TokenTypes.IDENT)
 end

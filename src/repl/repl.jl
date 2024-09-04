@@ -1,11 +1,8 @@
-export REPL
-
-
 module REPL
 
 export start
 
-import ..Lexer
+import ..Parser, ..Program, ..show_errors
 
 const PROMPT = ">> "
 
@@ -15,10 +12,14 @@ function start(in::IO=stdin, out::IO=stdout)
             print(out, PROMPT)
             line = readline(in)
 
-            l = Lexer(line)
-            for tok in l
-                println(out, "$tok")
+            parser = Parser(line)
+            prog = Program(parser)
+            if length(parser.errors) > 0
+                show_errors(parser)
+                continue
             end
+
+            println(prog)
         catch e
             if isa(e, InterruptException)
                 break
