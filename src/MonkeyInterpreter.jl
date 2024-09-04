@@ -2,7 +2,6 @@ module MonkeyInterpreter
 
 export Token, TokenType, TokenTypes  # token.jl
 export Lexer, next_token!  # lexer.jl
-export REPL  # repl.jl
 export Node,  # ast.jl
     Statement,
     Expression,
@@ -23,12 +22,15 @@ export Node,  # ast.jl
     statement_node,
     expression_node
 export Parser,  # parser.jl
-    next_token!
+    next_token!,
+    show_errors
+export REPL  # repl.jl
+
 
 include("token/token.jl")
 include("lexer/lexer.jl")
-include("repl/repl.jl")
 include("ast/ast.jl")
 include("parser/parser.jl")
+include("repl/repl.jl")
 
 end  # module MonkeyInterpreter

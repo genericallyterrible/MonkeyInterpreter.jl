@@ -92,6 +92,15 @@ Program(p::Parser) = Program([stmnt for stmnt in p])
 Program(l::Lexer) = Program(Parser(l))
 Program(input::AbstractString) = Program(Parser(input))
 
+function show_errors(io::IO, p::Parser)
+    for err in p.errors
+        printstyled(io, "ERROR: "; color=:red)
+        showerror(io, err)
+        println(io)
+    end
+end
+show_errors(p::Parser) = show_errors(stdout, p)
+
 """
     next_token!(p::Parser)::Token
 
