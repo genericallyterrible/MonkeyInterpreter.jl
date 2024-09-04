@@ -22,6 +22,7 @@ const OPERATOR_PRECEDENCE::Dict{TokenType,Precedence} = Dict(
     TokenTypes.MINUS => Precedences.SUM,
     TokenTypes.SLASH => Precedences.PRODUCT,
     TokenTypes.ASTERISK => Precedences.PRODUCT,
+    TokenTypes.LPAREN => Precedences.CALL,
 )
 
 
@@ -352,6 +353,31 @@ function parse_block_statement!(p::Parser)::BlockStatement
     return BlockStatement(tok, stmnts)
 end
 
+function parse_call_arguments!(p::Parser)::Vector{Expression}
+    args::Vector{Expression} = []
+    next_token!(p)
+
+    if current_token_is(p, TokenTypes.RPAREN)
+        return args
+    end
+
+    push!(args, parse_expression!(p, Precedences.LOWEST))
+
+    while (peek_token_is(p, TokenTypes.COMMA))
+        next_token!(p)
+        next_token!(p)
+        push!(args, parse_expression!(p, Precedences.LOWEST))
+    end
+
+    expect_next_token!(p, TokenTypes.RPAREN)
+
+    return args
+end
+
+function parse_call_expression!(p::Parser, callee::Union{Identifier,FunctionLiteral})::CallExpression
+    return CallExpression(p.current_token, callee, parse_call_arguments!(p))
+end
+
 const PREFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
     TokenTypes.IDENT => parse_identifier,
     TokenTypes.INT => parse_integer_literal,
@@ -373,5 +399,5 @@ const INFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
     TokenTypes.NOT_EQ => parse_infix_expression!,
     TokenTypes.LT => parse_infix_expression!,
     TokenTypes.GT => parse_infix_expression!,
-    TokenTypes.LPAREN => parse_grouped_expression!,
+    TokenTypes.LPAREN => parse_call_expression!,
 )

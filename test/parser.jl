@@ -45,6 +45,9 @@ using Test, MonkeyInterpreter
         test_literal_expression(exp.right, right)
     end
 
+    test_lit_or_infix(exp::Expression, value) = test_literal_expression(exp, value)
+    test_lit_or_infix(exp::Expression, left, operator::String, right) = test_infix_expression(exp, left, operator, right)
+
     @inline function test_let_statement(stmnt::Statement, name::String, value)
         @test typeof(stmnt) == LetStatement
         @test token_literal(stmnt) == "let"
@@ -253,6 +256,18 @@ using Test, MonkeyInterpreter
                     "!(true == true)",
                     "(!(true == true))", 1
                 ),
+                (
+                    "a + add(b * c) + d",
+                    "((a + add((b * c))) + d)", 1
+                ),
+                (
+                    "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+                    "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))", 1
+                ),
+                (
+                    "add(a + b + c * d / f + g)",
+                    "add((((a + b) + ((c * d) / f)) + g))", 1
+                ),
             ]
             for (input, expected, stmnts) in tests
                 program = test_program_parse(input)
@@ -320,6 +335,29 @@ using Test, MonkeyInterpreter
                 @test length(func.body.statements) == length(expressions)
                 for (got_stmnt, expected_stmnt) in zip(func.body.statements, expressions)
                     test_infix_expression(got_stmnt.expression, expected_stmnt...)
+                end
+            end
+        end
+
+        @testset "Parse Call Expression" begin
+            tests = [
+                ("add(1, 2 * 3, 4 + 5);" => ("add", [1, (2, "*", 3), (4, "+", 5)])),
+            ]
+            for (input, (ident, args)) in tests
+                program = test_program_parse(input)
+                @test length(program.statements) == 1
+
+                stmnt = program.statements[1]
+                @test typeof(stmnt) == ExpressionStatement
+
+                cexp = stmnt.expression
+                @test typeof(cexp) == CallExpression
+
+                test_identifier(cexp.callee, ident)
+
+                @test length(cexp.arguments) == length(args)
+                for (got_args, expected_args) in zip(cexp.arguments, args)
+                    test_lit_or_infix(got_args, expected_args...)
                 end
             end
         end

@@ -14,6 +14,7 @@ export Node,  # ast.jl
     InfixExpression,
     IfExpression,
     FunctionLiteral,
+    CallExpression,
     BlockStatement,
     LetStatement,
     ReturnStatement,

@@ -62,6 +62,12 @@ struct FunctionLiteral <: Expression
     body::BlockStatement
 end
 
+struct CallExpression <: Expression
+    token::Token
+    callee::Union{Identifier,FunctionLiteral}
+    arguments::Vector{Expression}
+end
+
 struct LetStatement <: Statement
     token::Token
     name::Identifier
@@ -122,6 +128,11 @@ Base.print(io::IO, fl::FunctionLiteral) = begin
     print(io, token_literal(fl), "(")
     join(io, fl.parameters, ", ")
     print(io, ")", fl.body)
+end
+Base.print(io::IO, ce::CallExpression) = begin
+    print(io, ce.callee, "(")
+    join(io, ce.arguments, ", ")
+    print(io, ")")
 end
 Base.print(io::IO, b::BlockStatement) = print(io, b.statements...)
 Base.print(io::IO, p::Program) = print(io, p.statements...)
