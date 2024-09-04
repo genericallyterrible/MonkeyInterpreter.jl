@@ -66,8 +66,8 @@ using Test, MonkeyInterpreter
         @testset "Parse Let Statements" begin
             tests = [
                 ("let x = 5;", "x", 5),
-                ("let y = 10;", "y", 10),
-                ("let foobar = 838383;", "foobar", 838383),
+                ("let y = true;", "y", true),
+                ("let foobar = y;", "foobar", "y"),
             ]
 
             for (input, name, value) in tests
@@ -82,8 +82,8 @@ using Test, MonkeyInterpreter
         @testset "Parse Return Statements" begin
             tests = [
                 ("return 5;", 5),
-                ("return 10;", 10),
-                ("return 993322;", 993322),
+                ("return true;", true),
+                ("return foobar;", "foobar"),
             ]
 
             for (input, return_value) in tests

@@ -199,15 +199,14 @@ end
 Parses a `LET` statement from the parser.
 """
 function parse_let_statement!(p::Parser)::LetStatement
-    let_tok = p.current_token
-
+    tok = p.current_token
     ident = Identifier(expect_next_token!(p, TokenTypes.IDENT))
 
     expect_next_token!(p, TokenTypes.ASSIGN)
     next_token!(p)
 
     expr = parse_expression!(p, Precedences.LOWEST)
-    return LetStatement(let_tok, ident, expr)
+    return LetStatement(tok, ident, expr)
 end
 
 """
@@ -216,13 +215,12 @@ end
 Parses a `RETURN` statement from the parser.
 """
 function parse_return_statement!(p::Parser)::ReturnStatement
-    return_tok = p.current_token
+    tok = p.current_token
 
     next_token!(p)
 
     expr = parse_expression!(p, Precedences.LOWEST)
-
-    return ReturnStatement(return_tok, expr)
+    return ReturnStatement(tok, expr)
 end
 
 function parse_expression_statement!(p::Parser)::ExpressionStatement
