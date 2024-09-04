@@ -13,6 +13,7 @@ export Node,  # ast.jl
     PrefixExpression,
     InfixExpression,
     IfExpression,
+    FunctionLiteral,
     BlockStatement,
     LetStatement,
     ReturnStatement,

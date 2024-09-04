@@ -61,11 +61,11 @@ function Base.showerror(io::IO, e::UnsupportedInfixError)
 end
 
 struct IntegerLiteralParseError <: ParseError
-    literal::String
+    token::Token
 end
 
 function Base.showerror(io::IO, e::IntegerLiteralParseError)
-    print(io, nameof(typeof(e)), ": cannot parse '", e.literal, "' as IntegerLiteral")
+    print(io, nameof(typeof(e)), ": cannot parse '", e.token.literal, "' as IntegerLiteral")
 end
 
 mutable struct Parser
@@ -200,8 +200,7 @@ Parses a `LET` statement from the parser.
 function parse_let_statement!(p::Parser)::LetStatement
     let_tok = p.current_token
 
-    ident_tok = expect_next_token!(p, TokenTypes.IDENT)
-    ident = Identifier(ident_tok, ident_tok.literal)
+    ident = Identifier(expect_next_token!(p, TokenTypes.IDENT))
 
     expect_next_token!(p, TokenTypes.ASSIGN)
     next_token!(p)
@@ -249,27 +248,26 @@ function parse_expression!(p::Parser, precedence::Precedence)::Expression
 end
 
 function parse_identifier(p::Parser)::Identifier
-    return Identifier(p.current_token, p.current_token.literal)
+    return Identifier(p.current_token)
 end
 
 function parse_integer_literal(p::Parser)::IntegerLiteral
     try
-        return IntegerLiteral(p.current_token, p.current_token.literal)
+        return IntegerLiteral(p.current_token)
     catch
-        throw(IntegerLiteralParseError(p.current_token.literal))
+        throw(IntegerLiteralParseError(p.current_token))
     end
 end
 
 function parse_prefix_expression!(p::Parser)::PrefixExpression
     tok = p.current_token
-    op = p.current_token.literal
     next_token!(p)
     right = parse_expression!(p, Precedences.PREFIX)
-    return PrefixExpression(tok, op, right)
+    return PrefixExpression(tok, right)
 end
 
 function parse_boolean_literal(p::Parser)::BooleanLiteral
-    return BooleanLiteral(p.current_token, current_token_is(p, TokenTypes.TRUE))
+    return BooleanLiteral(p.current_token)
 end
 
 function parse_grouped_expression!(p::Parser)::Expression
@@ -281,18 +279,19 @@ end
 
 function parse_infix_expression!(p::Parser, left::Expression)::InfixExpression
     tok = p.current_token
-    op = p.current_token.literal
     prec = current_precedence(p)
     next_token!(p)
     right = parse_expression!(p, prec)
-    return InfixExpression(tok, op, left, right)
+    return InfixExpression(tok, left, right)
 end
 
 function parse_if_expression!(p::Parser)::IfExpression
     tok = p.current_token
+
     expect_next_token!(p, TokenTypes.LPAREN)
     condition = parse_expression!(p, Precedences.LOWEST)
     expect_current_token(p, TokenTypes.RPAREN)
+
     expect_next_token!(p, TokenTypes.LBRACE)
     consequence = parse_block_statement!(p)
 
@@ -306,16 +305,50 @@ function parse_if_expression!(p::Parser)::IfExpression
     return IfExpression(tok, condition, consequence, alternative)
 end
 
+function parse_function_parameters!(p::Parser)::Vector{Identifier}
+    idents::Vector{Identifier} = []
+    next_token!(p)
+
+    if current_token_is(p, TokenTypes.RPAREN)
+        return idents
+    end
+
+    push!(idents, Identifier(p.current_token))
+
+    while (peek_token_is(p, TokenTypes.COMMA))
+        next_token!(p)
+        next_token!(p)
+        push!(idents, Identifier(p.current_token))
+    end
+
+    expect_next_token!(p, TokenTypes.RPAREN)
+
+    return idents
+end
+
+function parse_function_literal!(p::Parser)::FunctionLiteral
+    tok = p.current_token
+
+    expect_next_token!(p, TokenTypes.LPAREN)
+    params = parse_function_parameters!(p)
+    expect_current_token(p, TokenTypes.RPAREN)
+
+    expect_next_token!(p, TokenTypes.LBRACE)
+    body = parse_block_statement!(p)
+
+    return FunctionLiteral(tok, params, body)
+end
+
 function parse_block_statement!(p::Parser)::BlockStatement
     tok = p.current_token
     stmnts = []
-    
+
     next_token!(p)
     while !(current_token_is(p, TokenTypes.RBRACE) || current_token_is(p, TokenTypes.EOF))
         push!(stmnts, parse_statement!(p))
         next_token!(p)
     end
-    
+
     return BlockStatement(tok, stmnts)
 end
 
@@ -328,7 +361,7 @@ const PREFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
     TokenTypes.FALSE => parse_boolean_literal,
     TokenTypes.LPAREN => parse_grouped_expression!,
     TokenTypes.IF => parse_if_expression!,
-    # TokenTypes.FUNCTION => () -> nothing,
+    TokenTypes.FUNCTION => parse_function_literal!,
 )
 
 const INFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(

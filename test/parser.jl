@@ -293,5 +293,35 @@ using Test, MonkeyInterpreter
                 end
             end
         end
+
+        @testset "Parse Function Literal" begin
+            tests = [
+                ("fn() {};" => ([], [])),
+                ("fn(x) {};" => (["x"], [])),
+                ("fn(x, y) {};" => (["x", "y"], [])),
+                ("fn(x, y, z) {};" => (["x", "y", "z"], [])),
+                ("fn(x, y) { x + y; };" => (["x", "y"], [("x", "+", "y")])),
+            ]
+            for (input, (params, expressions)) in tests
+                program = test_program_parse(input)
+                @test length(program.statements) == 1
+
+                stmnt = program.statements[1]
+                @test typeof(stmnt) == ExpressionStatement
+
+                func = stmnt.expression
+                @test typeof(func) == FunctionLiteral
+
+                @test length(func.parameters) == length(params)
+                for (got_ident, expected_ident) in zip(func.parameters, params)
+                    @test got_ident.value == expected_ident
+                end
+                
+                @test length(func.body.statements) == length(expressions)
+                for (got_stmnt, expected_stmnt) in zip(func.body.statements, expressions)
+                    test_infix_expression(got_stmnt.expression, expected_stmnt...)
+                end
+            end
+        end
     end
 end

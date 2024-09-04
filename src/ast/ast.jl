@@ -14,23 +14,27 @@ struct Identifier <: Expression
     token::Token
     value::String
 end
+Identifier(token::Token) = Identifier(token, token.literal)
 
 struct IntegerLiteral <: Expression
     token::Token
     value::Int64
 end
 IntegerLiteral(token::Token, value::String) = IntegerLiteral(token, parse(Int64, value))
+IntegerLiteral(token::Token) = IntegerLiteral(token, token.literal)
 
 struct BooleanLiteral <: Expression
     token::Token
     value::Bool
 end
+BooleanLiteral(token::Token) = BooleanLiteral(token, token.type == TokenTypes.TRUE)
 
 struct PrefixExpression <: Expression
     token::Token
     operator::String
     right::Expression
 end
+PrefixExpression(token::Token, right::Expression) = PrefixExpression(token, token.literal, right)
 
 struct InfixExpression <: Expression
     token::Token
@@ -38,6 +42,7 @@ struct InfixExpression <: Expression
     left::Expression
     right::Expression
 end
+InfixExpression(token::Token, left::Expression, right::Expression) = InfixExpression(token, token.literal, left, right)
 
 struct BlockStatement <: Statement
     token::Token
@@ -49,6 +54,12 @@ struct IfExpression <: Expression
     condition::Expression
     consequence::BlockStatement
     alternative::Union{BlockStatement,Nothing}
+end
+
+struct FunctionLiteral <: Expression
+    token::Token
+    parameters::Vector{Identifier}
+    body::BlockStatement
 end
 
 struct LetStatement <: Statement
@@ -106,6 +117,11 @@ Base.print(io::IO, ie::IfExpression) = begin
     if !isnothing(ie.alternative)
         print(io, " else ", ie.alternative)
     end
+end
+Base.print(io::IO, fl::FunctionLiteral) = begin
+    print(io, token_literal(fl), "(")
+    join(io, fl.parameters, ", ")
+    print(io, ")", fl.body)
 end
 Base.print(io::IO, b::BlockStatement) = print(io, b.statements...)
 Base.print(io::IO, p::Program) = print(io, p.statements...)
