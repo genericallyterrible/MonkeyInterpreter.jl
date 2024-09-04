@@ -120,6 +120,13 @@ Returns whether the next token in the Parser `p` has TokenType `t`.
     return p.peek_token.type == t
 end
 
+function expect_current_token(p::Parser, t::TokenType)::Token
+    if !current_token_is(p, t)
+        throw(ExpectedTokenError(t, p.current_token.type))
+    end
+    return p.current_token
+end
+
 """
     expect_next_token!(p::Parser, t::TokenType)::Token
 
@@ -282,7 +289,37 @@ function parse_infix_expression!(p::Parser, left::Expression)::InfixExpression
     next_token!(p)
     right = parse_expression!(p, prec)
     return InfixExpression(tok, op, left, right)
+end
 
+function parse_if_expression!(p::Parser)::IfExpression
+    tok = p.current_token
+    expect_next_token!(p, TokenTypes.LPAREN)
+    condition = parse_expression!(p, Precedences.LOWEST)
+    expect_current_token(p, TokenTypes.RPAREN)
+    expect_next_token!(p, TokenTypes.LBRACE)
+    consequence = parse_block_statement!(p)
+
+    alternative = nothing
+    if peek_token_is(p, TokenTypes.ELSE)
+        next_token!(p)
+        expect_next_token!(p, TokenTypes.LBRACE)
+        alternative = parse_block_statement!(p)
+    end
+
+    return IfExpression(tok, condition, consequence, alternative)
+end
+
+function parse_block_statement!(p::Parser)::BlockStatement
+    tok = p.current_token
+    stmnts = []
+    
+    next_token!(p)
+    while !(current_token_is(p, TokenTypes.RBRACE) || current_token_is(p, TokenTypes.EOF))
+        push!(stmnts, parse_statement!(p))
+        next_token!(p)
+    end
+    
+    return BlockStatement(tok, stmnts)
 end
 
 const PREFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
@@ -293,7 +330,7 @@ const PREFIX_PARSE_FNS::Dict{TokenType,Function} = Dict(
     TokenTypes.TRUE => parse_boolean_literal,
     TokenTypes.FALSE => parse_boolean_literal,
     TokenTypes.LPAREN => parse_grouped_expression!,
-    # TokenTypes.IF => () -> nothing,
+    TokenTypes.IF => parse_if_expression!,
     # TokenTypes.FUNCTION => () -> nothing,
 )
 

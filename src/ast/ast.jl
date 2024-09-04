@@ -39,6 +39,18 @@ struct InfixExpression <: Expression
     right::Expression
 end
 
+struct BlockStatement <: Statement
+    token::Token
+    statements::Vector{Statement}
+end
+
+struct IfExpression <: Expression
+    token::Token
+    condition::Expression
+    consequence::BlockStatement
+    alternative::Union{BlockStatement,Nothing}
+end
+
 struct LetStatement <: Statement
     token::Token
     name::Identifier
@@ -89,6 +101,13 @@ Base.print(io::IO, il::IntegerLiteral) = print(io, il.value)
 Base.print(io::IO, bl::BooleanLiteral) = print(io, bl.value)
 Base.print(io::IO, pe::PrefixExpression) = print(io, "(", pe.operator, pe.right, ")")
 Base.print(io::IO, ie::InfixExpression) = print(io, "(", ie.left, " ", ie.operator, " ", ie.right, ")")
+Base.print(io::IO, ie::IfExpression) = begin
+    print(io, "if", ie.condition, " ", ie.consequence)
+    if !isnothing(ie.alternative)
+        print(io, " else ", ie.alternative)
+    end
+end
+Base.print(io::IO, b::BlockStatement) = print(io, b.statements...)
 Base.print(io::IO, p::Program) = print(io, p.statements...)
 Base.print(io::IO, ls::LetStatement) = print(io, token_literal(ls), " ", ls.name, " = ", ls.value, ";")
 Base.print(io::IO, rs::ReturnStatement) = print(io, token_literal(rs), " ", rs.return_value, ";")

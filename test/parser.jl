@@ -159,7 +159,7 @@ using Test, MonkeyInterpreter
                 ("true != false;" => (true, "!=", false)),
                 ("false == false;" => (false, "==", false)),
             ]
-            for (input, (left_value, operator, right_value)) in tests
+            for (input, (left, operator, right)) in tests
                 program = test_program_parse(input)
                 @test length(program.statements) == 1
 
@@ -167,10 +167,7 @@ using Test, MonkeyInterpreter
                 @test typeof(stmnt) == ExpressionStatement
 
                 exp = stmnt.expression
-                @test typeof(exp) == InfixExpression
-                @test exp.operator == operator
-                test_literal_expression(exp.left, left_value)
-                test_literal_expression(exp.right, right_value)
+                test_infix_expression(exp, left, operator, right)
             end
         end
 
@@ -261,6 +258,39 @@ using Test, MonkeyInterpreter
                 program = test_program_parse(input)
                 @test length(program.statements) == stmnts
                 @test string(program) == expected
+            end
+        end
+
+        @testset "Parse If Expressions" begin
+            tests = [
+                ("if (x < y) { x }" => ("x", "<", "y", ["x"], nothing)),
+                ("if (x < y) { x } else { y }" => ("x", "<", "y", ["x"], ["y"])),
+            ]
+
+            for (input, (left, operator, right, consequences, alternatives)) in tests
+                program = test_program_parse(input)
+                @test length(program.statements) == 1
+
+                stmnt = program.statements[1]
+                @test typeof(stmnt) == ExpressionStatement
+
+                exp = stmnt.expression
+                @test typeof(exp) == IfExpression
+                test_infix_expression(exp.condition, left, operator, right)
+
+                @test length(exp.consequence.statements) == length(consequences)
+                for (stmnt, expected) in zip(exp.consequence.statements, consequences)
+                    test_literal_expression(stmnt.expression, expected)
+                end
+
+                if isnothing(alternatives)
+                    @test exp.alternative === nothing
+                else
+                    @test length(exp.alternative.statements) == length(alternatives)
+                    for (stmnt, expected) in zip(exp.alternative.statements, alternatives)
+                        test_literal_expression(stmnt.expression, expected)
+                    end
+                end
             end
         end
     end

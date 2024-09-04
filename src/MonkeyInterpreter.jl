@@ -12,6 +12,8 @@ export Node,  # ast.jl
     BooleanLiteral,
     PrefixExpression,
     InfixExpression,
+    IfExpression,
+    BlockStatement,
     LetStatement,
     ReturnStatement,
     ExpressionStatement,
