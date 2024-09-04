@@ -155,9 +155,6 @@ function Base.iterate(p::Parser, state::Nothing=nothing)
         try
             return (parse_statement!(p), nothing)
         catch e
-            if stmnt === nothing
-                println(stmnt)
-            end
             if isa(e, ParseError)
                 push!(p.errors, e)
             else
